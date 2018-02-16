@@ -43,13 +43,12 @@ interface ICsvToDbLoaderFile
     public function getFileCsvRow();
 }
 
-class CsvToDbLoaderDb implements ICsvToDbLoaderDb
+class CsvToDbLoaderMysql implements ICsvToDbLoaderDb
 {
     private $dbConf;
     private $dbLink;
 
     public function __construct($dbConf = [
-        'type' => 'mysql',
         'host' => '',
         'user' => '',
         'password' => '',
@@ -78,25 +77,15 @@ class CsvToDbLoaderDb implements ICsvToDbLoaderDb
 
     public function connectDb()
     {
-        if ($this->dbConf['type'] == 'mysql') {
-            $this->dbLink = mysqli_connect(
-                $this->dbConf['host'],
-                $this->dbConf['user'],
-                $this->dbConf['password'],
-                $this->dbConf['database']
-            );
-        } elseif ($this->dbConf['type'] == 'postgresql') {
-            $this->dbLink = pg_connect(
-                $this->dbConf['host'],
-                $this->dbConf['user'],
-                $this->dbConf['password'],
-                $this->dbConf['database']
-            );
-        }
+        $this->dbLink = mysqli_connect(
+            $this->dbConf['host'],
+            $this->dbConf['user'],
+            $this->dbConf['password'],
+            $this->dbConf['database']
+        );
 
         if (!$this->dbLink) {
-            throw new \Exception('Can not connect to database! ' . implode(', ', [
-                    'Type: ' . $this->dbConf['type'],
+            throw new \Exception('Can not connect to mysql! ' . implode(', ', [
                     'Host: ' . $this->dbConf['host'],
                     'User: ' . $this->dbConf['user'],
                     'Password: ' . ($this->dbConf['password'] != '') ? 'YES' : 'NO',
@@ -107,48 +96,99 @@ class CsvToDbLoaderDb implements ICsvToDbLoaderDb
 
     public function disconnectDb()
     {
-        if ($this->dbConf['type'] == 'mysql') {
-            mysqli_close($this->dbLink);
-        } elseif ($this->dbConf['type'] == 'postgresql') {
-            pg_close($this->dbLink);
-        }
+        mysqli_close($this->dbLink);
         $this->dbLink = null;
     }
 
     public function transformRowToSql($row)
     {
-        if ($this->dbConf['type'] == 'mysql') {
-            $sql = 'INSERT INTO ' . $this->dbConf['table'] . ' (id, name, email, age) VALUES '
-                . '(DEFAULT,'
-                . ' \'' . mysqli_escape_string($this->dbLink, $row[0]) . '\','
-                . ' \'' . mysqli_escape_string($this->dbLink, $row[1]) . '\','
-                . ' \'' . mysqli_escape_string($this->dbLink, $row[2]) . '\')';
-            return $sql;
-        } elseif ($this->dbConf['type'] == 'postgresql') {
-            $sql = 'INSERT INTO ' . $this->dbConf['table'] . ' (id, name, email, age) VALUES '
-                . '(DEFAULT,'
-                . ' \'' . pg_escape_string($this->dbLink, $row[0]) . '\','
-                . ' \'' . pg_escape_string($this->dbLink, $row[1]) . '\','
-                . ' \'' . pg_escape_string($this->dbLink, $row[2]) . '\')';
-            return $sql;
-        }
+        $sql = 'INSERT INTO ' . $this->dbConf['table'] . ' (id, name, email, age) VALUES '
+            . '(DEFAULT,'
+            . ' \'' . mysqli_escape_string($this->dbLink, $row[0]) . '\','
+            . ' \'' . mysqli_escape_string($this->dbLink, $row[1]) . '\','
+            . ' \'' . mysqli_escape_string($this->dbLink, $row[2]) . '\')';
+        return $sql;
     }
 
     public function queryDb($sql)
     {
-        if ($this->dbConf['type'] == 'mysql') {
-            $queryResult = mysqli_query($this->dbLink, $sql);
-            if (!$queryResult) {
-                throw new \Exception('Could not execute sql! ' . $sql, 5);
-            }
-            return $queryResult;
-        } elseif ($this->dbConf['type'] == 'postgresql') {
-            $queryResult = pg_query($this->dbLink, $sql);
-            if (!$queryResult) {
-                throw new \Exception('Could not execute sql! ' . $sql, 5);
-            }
-            return $queryResult;
+        $queryResult = mysqli_query($this->dbLink, $sql);
+        if (!$queryResult) {
+            throw new \Exception('Could not execute sql! ' . $sql, 5);
         }
+        return $queryResult;
+    }
+}
+
+class CsvToDbLoaderPostgresql implements ICsvToDbLoaderDb
+{
+    private $dbConf;
+    private $dbLink;
+
+    public function __construct($dbConf = [
+        'host' => '',
+        'user' => '',
+        'password' => '',
+        'database' => '',
+        'table' => '',
+    ])
+    {
+        $this->dbLink = null;
+        $this->dbConf = $dbConf;
+    }
+
+    public function __destruct()
+    {
+    }
+
+    public function setDbConf($dbConf)
+    {
+        $this->dbConf = $dbConf;
+        return $this;
+    }
+
+    public function getDbConf()
+    {
+        return $this->dbConf;
+    }
+
+    public function connectDb()
+    {
+        $this->dbLink = pg_connect("host=" . $this->dbConf['host'] . " port=5432 dbname=" . $this->dbConf['database'] . " user=" . $this->dbConf['user'] . " password=" . $this->dbConf['password'] . "");
+
+        if (!$this->dbLink) {
+            throw new \Exception('Can not connect to database! ' . implode(', ', [
+                    'Host: ' . $this->dbConf['host'],
+                    'User: ' . $this->dbConf['user'],
+                    'Password: ' . ($this->dbConf['password'] != '') ? 'YES' : 'NO',
+                    'Database: ' . $this->dbConf['database']
+                ]), 1);
+        }
+    }
+
+    public function disconnectDb()
+    {
+        pg_close($this->dbLink);
+        $this->dbLink = null;
+    }
+
+    public function transformRowToSql($row)
+    {
+        $sql = 'INSERT INTO ' . $this->dbConf['table'] . ' (id, name, email, age) VALUES '
+            . '(DEFAULT,'
+            . ' \'' . pg_escape_string($this->dbLink, $row[0]) . '\','
+            . ' \'' . pg_escape_string($this->dbLink, $row[1]) . '\','
+            . ' \'' . pg_escape_string($this->dbLink, $row[2]) . '\')';
+        return $sql;
+    }
+
+    public function queryDb($sql)
+    {
+        $queryResult = pg_query($this->dbLink, $sql);
+        if (!$queryResult) {
+            throw new \Exception('Could not execute sql! ' . $sql, 5);
+        }
+        return $queryResult;
     }
 }
 
@@ -215,16 +255,10 @@ class CsvToDbLoader implements ICsvToDbLoader
     private $db;
     private $file;
 
-    public function __construct($fileName = '', $dbConf = [
-        'host' => '',
-        'user' => '',
-        'password' => '',
-        'database' => '',
-        'table' => '',
-    ])
+    public function __construct(ICsvToDbLoaderFile $file, ICsvToDbLoaderDb $db)
     {
-        $this->db = new CsvToDbLoaderDb($dbConf);
-        $this->file = new CsvToDbLoaderFile($fileName);
+        $this->db = $db;
+        $this->file = $file;
         $this->csvHeader = null;
         $this->numRows = 0;
     }
@@ -255,6 +289,15 @@ class CsvToDbLoader implements ICsvToDbLoader
         return $this->numRows;
     }
 
+    public function checkCsvHeader($csvHeader)
+    {
+        if (empty($this->csvHeader)) {
+            $this->setCsvHeader($csvHeader);
+            return true;
+        }
+        return false;
+    }
+
     public function load()
     {
         $this->db->connectDb();
@@ -270,20 +313,10 @@ class CsvToDbLoader implements ICsvToDbLoader
         $this->file->closeFile();
         $this->db->disconnectDb();
     }
-
-    public function checkCsvHeader($csvHeader)
-    {
-        if (empty($this->csvHeader)) {
-            $this->setCsvHeader($csvHeader);
-            return true;
-        }
-        return false;
-    }
 }
 
 $fileName = '/tmp/test.tsv';
 $dbConf = [
-    'type' => 'mysql',
     'host' => '127.0.0.1',
     'user' => 'my_user',
     'password' => 'my_password',
@@ -292,7 +325,9 @@ $dbConf = [
 ];
 
 try {
-    $loader = new CsvToDbLoader($fileName, $dbConf);
+    $db = new CsvToDbLoaderMysql($dbConf);
+    $file = new CsvToDbLoaderFile($fileName);
+    $loader = new CsvToDbLoader($file, $db);
     $loader->load();
 
     $output = 'Rows inserted: ' . $loader->getNumRows();
