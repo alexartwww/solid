@@ -60,10 +60,6 @@ class CsvToDbLoaderMysql implements ICsvToDbLoaderDb
         $this->dbConf = $dbConf;
     }
 
-    public function __destruct()
-    {
-    }
-
     public function setDbConf($dbConf)
     {
         $this->dbConf = $dbConf;
@@ -137,10 +133,6 @@ class CsvToDbLoaderPostgresql implements ICsvToDbLoaderDb
         $this->dbConf = $dbConf;
     }
 
-    public function __destruct()
-    {
-    }
-
     public function setDbConf($dbConf)
     {
         $this->dbConf = $dbConf;
@@ -201,10 +193,6 @@ class CsvToDbLoaderFile implements ICsvToDbLoaderFile
     {
         $this->fileName = $fileName;
         $this->fileDescriptor = null;
-    }
-
-    public function __destruct()
-    {
     }
 
     public function setFileName($fileName)
@@ -271,8 +259,20 @@ class CsvToDbLoader implements ICsvToDbLoader
         $this->numRows = 0;
     }
 
-    public function __destruct()
+    public function load()
     {
+        $this->db->connectDb();
+        $this->file->openFile();
+        while ($row = $this->file->getFileCsvRow()) {
+            if ($this->checkCsvHeader($row)) {
+                continue;
+            }
+            $sql = $this->db->transformRowToSql($row);
+            $this->db->queryDb($sql);
+            $this->numRows++;
+        }
+        $this->file->closeFile();
+        $this->db->disconnectDb();
     }
 
     public function setCsvHeader($csvHeader)
@@ -304,22 +304,6 @@ class CsvToDbLoader implements ICsvToDbLoader
             return true;
         }
         return false;
-    }
-
-    public function load()
-    {
-        $this->db->connectDb();
-        $this->file->openFile();
-        while ($row = $this->file->getFileCsvRow()) {
-            if ($this->checkCsvHeader($row)) {
-                continue;
-            }
-            $sql = $this->db->transformRowToSql($row);
-            $this->db->queryDb($sql);
-            $this->numRows++;
-        }
-        $this->file->closeFile();
-        $this->db->disconnectDb();
     }
 }
 

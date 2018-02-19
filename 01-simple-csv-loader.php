@@ -6,7 +6,7 @@ if ($db_type == 'mysql') {
 } elseif ($db_type == 'postgresql') {
     $link = pg_connect("host=127.0.0.1 port=5432 dbname=my_db user=my_user password=my_password");
 }
-$contents = file_get_contents('/tmp/test.tsv');
+$contents = file_get_contents('/tmp/test.csv');
 
 $rows = explode("\n", $contents);
 $header = array_shift($rows);

@@ -69,8 +69,20 @@ class CsvToDbLoader implements ICsvToDbLoader, ICsvToDbLoaderDb, ICsvToDbLoaderF
         $this->numRows = 0;
     }
 
-    public function __destruct()
+    public function load()
     {
+        $this->connectDb();
+        $this->openFile();
+        while ($row = $this->getFileCsvRow()) {
+            if ($this->checkCsvHeader($row)) {
+                continue;
+            }
+            $sql = $this->transformRowToSql($row);
+            $this->queryDb($sql);
+            $this->numRows++;
+        }
+        $this->closeFile();
+        $this->disconnectDb();
     }
 
     public function setDbConf($dbConf)
@@ -115,22 +127,6 @@ class CsvToDbLoader implements ICsvToDbLoader, ICsvToDbLoaderDb, ICsvToDbLoaderF
     public function getNumRows()
     {
         return $this->numRows;
-    }
-
-    public function load()
-    {
-        $this->connectDb();
-        $this->openFile();
-        while ($row = $this->getFileCsvRow()) {
-            if ($this->checkCsvHeader($row)) {
-                continue;
-            }
-            $sql = $this->transformRowToSql($row);
-            $this->queryDb($sql);
-            $this->numRows++;
-        }
-        $this->closeFile();
-        $this->disconnectDb();
     }
 
     public function connectDb()
@@ -247,7 +243,7 @@ class CsvToDbLoader implements ICsvToDbLoader, ICsvToDbLoaderDb, ICsvToDbLoaderF
     }
 }
 
-$fileName = '/tmp/test.tsv';
+$fileName = '/tmp/test.csv';
 $dbConf = [
     'host' => '127.0.0.1',
     'user' => 'my_user',

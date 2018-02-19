@@ -1,5 +1,5 @@
 <?php
-$fileName = '/tmp/test.tsv';
+$fileName = '/tmp/test.csv';
 $dbConf = [
     'type' => 'mysql',
     'host' => '127.0.0.1',
@@ -44,7 +44,7 @@ if (!$file) {
 }
 $header = null;
 $num = 0;
-while ($row = fgetcsv($file, $length = 0 , $delimiter = ",", $enclosure = '"' , $escape = "\"")) {
+while ($row = fgetcsv($file, 0 , ",", '"' , "\"")) {
     if (empty($row)) {
         $header = $row;
         continue;

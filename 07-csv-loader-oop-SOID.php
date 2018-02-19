@@ -315,8 +315,9 @@ class CsvToDbLoader implements ICsvToDbLoader
     }
 }
 
-$fileName = '/tmp/test.tsv';
+$fileName = '/tmp/test.csv';
 $dbConf = [
+    'type' => 'mysql',
     'host' => '127.0.0.1',
     'user' => 'my_user',
     'password' => 'my_password',
@@ -325,7 +326,11 @@ $dbConf = [
 ];
 
 try {
-    $db = new CsvToDbLoaderMysql($dbConf);
+    if ($dbConf['type'] == 'mysql') {
+        $db = new CsvToDbLoaderMysql($dbConf);
+    } elseif ($dbConf['type'] == 'postgresql') {
+        $db = new CsvToDbLoaderPostgresql($dbConf);
+    }
     $file = new CsvToDbLoaderFile($fileName);
     $loader = new CsvToDbLoader($file, $db);
     $loader->load();
